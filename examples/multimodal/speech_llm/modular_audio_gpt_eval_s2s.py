@@ -62,6 +62,7 @@ def main(cfg) -> None:
     logging.info("\n\n************** Experiment configuration ***********")
     logging.info(f"\n{OmegaConf.to_yaml(cfg)}")
     logging.info("**************************************************\n\n")
+
     with open_dict(cfg):
         cfg.model.precision = cfg.trainer.precision
 
@@ -80,6 +81,7 @@ def main(cfg) -> None:
     if cfg.model.resume_from_checkpoint is not None:
         trainer.ckpt_path = cfg.model.resume_from_checkpoint
     model_cfg = imported_cls.merge_inference_cfg(cfg, trainer)
+
     model = imported_cls.restore_from(
         restore_path=cfg.model.restore_from_path,
         trainer=trainer,
@@ -96,11 +98,11 @@ def main(cfg) -> None:
         model = imported_cls.restore_from_pretrained_models(cfg, trainer=trainer)
     trainer.validate(model)
 
-    if cfg.get("save_as_nemo", None):
-        model.setup("predict")  # need to call setup() to load adapters and prepare for saving
-        model.save_to(cfg.save_as_nemo)
-        logging.info(f"Model saved to {Path(cfg.save_as_nemo).absolute()}, exiting...")
-        exit(0)
+    # if cfg.get("save_as_nemo", None):
+    #     model.setup("predict")  # need to call setup() to load adapters and prepare for saving
+    #     model.save_to(cfg.save_as_nemo)
+    #     logging.info(f"Model saved to {Path(cfg.save_as_nemo).absolute()}, exiting...")
+    #     exit(0)
 
 
 if __name__ == "__main__":

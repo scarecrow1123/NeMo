@@ -1081,6 +1081,7 @@ class ModularAudioGPTModel(SpeechLLMAdapterMixin, MegatronGPTSFTModel):
                     model_cfg[key] = val
             OmegaConf.resolve(cfg.model.data)
             # model_cfg.data.test_ds = cfg.model.data.test_ds if hasattr(cfg.model.data, "test_ds") else cfg.model.data.validation_ds
+            model_cfg.data.validation_ds = cfg.model.data.validation_ds
             model_cfg.data.train_ds = cfg.model.data.train_ds
 
         with open_dict(cfg):
