@@ -548,6 +548,7 @@ def sample_sequence_batch(
         batch_size = context_tokens.size(0)
         is_done = torch.zeros([batch_size]).byte().cuda()
         tokens = context_tokens
+
         output_logits = None
         all_generated_indices = None  # used to track all generated indices
         # Generate enough tokens for the longest sequence
@@ -785,7 +786,9 @@ def s2s_sample_sequence_batch(
                 min_length = extra.get('min_tokens_to_generate', 0)
                 assert min_length == 0
                 # make sure it won't sample outside the vocab_size range
-                logits[:, model.cfg.s2s_vocab_size :] = -float('Inf')
+                if not hasattr(model.model, "speech_decoder"):
+                    logits[:, model.cfg.s2s_vocab_size :] = -float('Inf')
+
                 logits = model.de_concat_multiproj_logits(logits)
 
                 # started indicates whether the current token step passes the context_length, so we make sure not to overwrite the context tokens
@@ -812,7 +815,17 @@ def s2s_sample_sequence_batch(
 
                 # import pdb; pdb.set_trace()
 
+                if inference_strategy.model.get_inference_config().get('unk_boost', None):
+                    logits[0][:, 0] += inference_strategy.model.get_inference_config().get('unk_boost', None)
+                if inference_strategy.model.get_inference_config().get('bos_boost', None):
+                    logits[0][:, 1] += inference_strategy.model.get_inference_config().get('bos_boost', None)
+                if inference_strategy.model.get_inference_config().get('eos_boost', None):
+                    logits[0][:, 2] += inference_strategy.model.get_inference_config().get('eos_boost', None)
                 prev = [get_prev(logits_i, started, temperature, extra) for logits_i in logits]
+                if inference_strategy.model.get_inference_config().get('greedy_on_text', False):
+                    prev[0] = get_prev(
+                        logits[0], started, temperature, {'greedy': True}
+                    )  # allow greedy on text and sampling on speech
                 prev = torch.stack(prev, dim=1)
                 started_expand = started.unsqueeze(1).expand(-1, prev.size(1))
                 new_tokens = switch(tokens[:, context_length], prev, started_expand)
